@@ -44,6 +44,7 @@
 //#define DISPLAY_STORED_CREDENTIALS_IN_CP        false
 
 //For ESP32, To use ESP32 Dev Module, QIO, Flash 4MB/80MHz, Upload 921600
+#define ESP32
 
 //Ported to ESP32
 #ifdef ESP32

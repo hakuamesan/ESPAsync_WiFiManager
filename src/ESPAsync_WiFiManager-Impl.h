@@ -241,11 +241,7 @@ ESPAsync_WiFiManager::ESPAsync_WiFiManager(AsyncWebServer * webserver, AsyncDNSS
 
   if (iHostname[0] == 0)
   {
-#ifdef ESP8266
-    String _hostname = "ESP8266-" + String(ESP.getChipId(), HEX);
-#else    //ESP32
     String _hostname = "ESP32-" + String(ESP_getChipId(), HEX);
-#endif
 
     _hostname.toUpperCase();
 
@@ -356,12 +352,8 @@ void ESPAsync_WiFiManager::setupConfigPortal()
     WiFi.setAutoConnect(1);
 
 #if !( USING_ESP32_S2 || USING_ESP32_C3 )
-#ifdef ESP8266
-  // KH, mod for Async
   server->reset();
-#else   //ESP32
-  server->reset();
-#endif
+
 
   if (!dnsServer)
     dnsServer = new AsyncDNSServer;
@@ -458,11 +450,7 @@ void ESPAsync_WiFiManager::setupConfigPortal()
 
 bool ESPAsync_WiFiManager::autoConnect()
 {
-#ifdef ESP8266
-  String ssid = "ESP_" + String(ESP.getChipId());
-#else   //ESP32
   String ssid = "ESP_" + String(ESP_getChipId());
-#endif
 
   return autoConnect(ssid.c_str(), NULL);
 }
@@ -539,12 +527,7 @@ String ESPAsync_WiFiManager::networkListAsString()
       item.replace("{v}", wifiSSIDs[i].SSID);
       item.replace("{r}", rssiQ);
 
-#if defined(ESP8266)
-
-      if (wifiSSIDs[i].encryptionType != ENC_TYPE_NONE)
-#else
       if (wifiSSIDs[i].encryptionType != WIFI_AUTH_OPEN)
-#endif
       {
         item.replace("{i}", "l");
       }
@@ -633,13 +616,8 @@ void ESPAsync_WiFiManager::scan()
         {
           wifiSSIDs[i].duplicate = false;
 
-#if defined(ESP8266)
-          WiFi.getNetworkInfo(i, wifiSSIDs[i].SSID, wifiSSIDs[i].encryptionType, wifiSSIDs[i].RSSI, wifiSSIDs[i].BSSID,
-                              wifiSSIDs[i].channel, wifiSSIDs[i].isHidden);
-#else
           WiFi.getNetworkInfo(i, wifiSSIDs[i].SSID, wifiSSIDs[i].encryptionType, wifiSSIDs[i].RSSI, wifiSSIDs[i].BSSID,
                               wifiSSIDs[i].channel);
-#endif
         }
 
         // RSSI SORT
@@ -807,11 +785,7 @@ void ESPAsync_WiFiManager::safeLoop()
 
 bool ESPAsync_WiFiManager::startConfigPortal()
 {
-#ifdef ESP8266
-  String ssid = "ESP_" + String(ESP.getChipId());
-#else   //ESP32
   String ssid = "ESP_" + String(ESP_getChipId());
-#endif
 
   ssid.toUpperCase();
 
@@ -863,14 +837,7 @@ bool ESPAsync_WiFiManager::startConfigPortal(char const *apName, char const *apP
       // since we are modal, we can scan every time
       shouldscan = true;
 
-#if defined(ESP8266)
-      // we might still be connecting, so that has to stop for scanning
-      ETS_UART_INTR_DISABLE ();
-      wifi_station_disconnect ();
-      ETS_UART_INTR_ENABLE ();
-#else
       WiFi.disconnect (false);
-#endif
 
       scan();
 
@@ -1068,18 +1035,15 @@ int ESPAsync_WiFiManager::connectWifi(const String& ssid, const String& pass)
     if (ssid != "")
       resetSettings();
 
-#ifdef ESP8266
-    setWifiStaticIP();
-#endif
 
     WiFi.mode(WIFI_AP_STA); //It will start in station mode if it was previously in AP mode.
 
     setHostname();
 
     // KH, Fix ESP32 staticIP after exiting CP
-#ifdef ESP32
+
     setWifiStaticIP();
-#endif
+
 
     if (ssid != "")
     {
@@ -1158,12 +1122,7 @@ wl_status_t ESPAsync_WiFiManager::waitForConnectResult()
         LOGERROR(F("Connection timed out"));
       }
 
-#if ( ESP8266 && (USING_ESP8266_CORE_VERSION >= 30000) )
-
-      if (status == WL_CONNECTED || status == WL_CONNECT_FAILED || status == WL_WRONG_PASSWORD)
-#else
       if (status == WL_CONNECTED || status == WL_CONNECT_FAILED)
-#endif
       {
         keepConnecting = false;
       }
@@ -1179,14 +1138,9 @@ wl_status_t ESPAsync_WiFiManager::waitForConnectResult()
 
 void ESPAsync_WiFiManager::startWPS()
 {
-#ifdef ESP8266
-  LOGINFO("START WPS");
-  WiFi.beginWPSConfig();
-  LOGINFO("END WPS");
-#else   //ESP32
   // TODO
   LOGINFO("ESP32 WPS TODO");
-#endif
+
 }
 
 //////////////////////////////////////////
@@ -1208,12 +1162,6 @@ const char* ESPAsync_WiFiManager::getStatus(const int& status)
 
     case WL_CONNECT_FAILED:
       return "WL_CONNECT_FAILED";
-
-#if ( ESP8266 && (USING_ESP8266_CORE_VERSION >= 30000) )
-
-    case WL_WRONG_PASSWORD:
-      return "WL_WRONG_PASSWORD";
-#endif
 
     case WL_DISCONNECTED:
       return "WL_DISCONNECTED";
@@ -1243,15 +1191,11 @@ void ESPAsync_WiFiManager::resetSettings()
 {
   LOGINFO(F("Previous settings invalidated"));
 
-#ifdef ESP8266
-  WiFi.disconnect(true);
-#else
   WiFi.disconnect(true, true);
 
   // Temporary fix for issue of not clearing WiFi SSID/PW from flash of ESP32
   // See https://github.com/khoih-prog/ESPAsync_WiFiManager/issues/25 and https://github.com/espressif/arduino-esp32/issues/400
   WiFi.begin("0", "0");
-#endif
 
   delay(200);
 
@@ -1962,9 +1906,6 @@ void ESPAsync_WiFiManager::handleInfo(AsyncWebServerRequest *request)
   page += F("<table class=\"table\">");
   page += F("<thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Chip ID</td><td>");
 
-#ifdef ESP8266
-  page += String(ESP.getChipId(), HEX);
-#else   //ESP32
 
   page += String(ESP_getChipId(), HEX);
   page += F("</td></tr>");
@@ -1978,18 +1919,15 @@ void ESPAsync_WiFiManager::handleInfo(AsyncWebServerRequest *request)
   page += ESP.getChipModel();
   page += F(" Rev");
   page += ESP.getChipRevision();
-#endif
+
 
   page += F("</td></tr>");
 
   page += F("<tr><td>Flash Chip ID</td><td>");
 
-#ifdef ESP8266
-  page += String(ESP.getFlashChipId(), HEX);
-#else   //ESP32
   // TODO
   page += F("TODO");
-#endif
+
 
   page += F("</td></tr>");
 
@@ -1999,12 +1937,9 @@ void ESPAsync_WiFiManager::handleInfo(AsyncWebServerRequest *request)
 
   page += F("<tr><td>Real Flash Size</td><td>");
 
-#ifdef ESP8266
-  page += ESP.getFlashChipRealSize();
-#else   //ESP32
   // TODO
   page += F("TODO");
-#endif
+
 
   page += F(" bytes</td></tr>");
 
@@ -2158,12 +2093,7 @@ void ESPAsync_WiFiManager::handleScan(AsyncWebServerRequest *request)
       item.replace("{v}", wifiSSIDs[i].SSID);
       item.replace("{r}", rssiQ);
 
-#if defined(ESP8266)
-
-      if (wifiSSIDs[i].encryptionType != ENC_TYPE_NONE)
-#else
       if (wifiSSIDs[i].encryptionType != WIFI_AUTH_OPEN)
-#endif
       {
         item.replace("{i}", "true");
       }
@@ -2241,11 +2171,7 @@ void ESPAsync_WiFiManager::handleReset(AsyncWebServerRequest *request)
   //WiFi.disconnect(true); // Wipe out WiFi credentials.
   //////
 
-#ifdef ESP8266
-  ESP.reset();
-#else   //ESP32
   ESP.restart();
-#endif
 
   delay(2000);
 }
@@ -2411,7 +2337,6 @@ String ESPAsync_WiFiManager::toStringIp(const IPAddress& ip)
 
 //////////////////////////////////////////
 
-#ifdef ESP32
 // We can't use WiFi.SSID() in ESP32 as it's only valid after connected.
 // SSID and Password stored in ESP32 wifi_ap_record_t and wifi_config_t are also cleared in reboot
 // Have to create a new function to store in EEPROM/SPIFFS for this purpose
@@ -2485,7 +2410,6 @@ uint32_t getChipOUI()
   return (uint32_t) (chipId64 >> 24);
 }
 
-#endif
 
 //////////////////////////////////////////
 
